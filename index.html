@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map with COG</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
+    <script src="https://unpkg.com/geotiff/dist/geotiff.min.js"></script>
+    <style>
+        #map {
+            height: 100vh;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([47.2, 11.3], 8);
+
+        // Add OpenStreetMap base layer
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // URL to your COG file
+        const cogUrl = "https://waldtypisierung.ocloud.de/index.php/s/S9N9t8mYTnYtBH3/download/total_precip_cog.tif";
+
+        // Load the COG layer
+        fetch(cogUrl)
+            .then(response => response.arrayBuffer())
+            .then(buffer => {
+                parseGeoraster(buffer).then(georaster => {
+                    const cogLayer = new GeoRasterLayer({
+                        georaster: georaster,
+                        opacity: 0.8,
+                        pixelValuesToColorFn: values => {
+                            // Apply a simple color mapping
+                            if (values[0] === 0) return null; // NoData
+                            return `rgba(${values[0]}, ${values[1]}, ${values[2]}, 255)`;
+                        },
+                        resolution: 256 // Adjust for performance
+                    });
+                    cogLayer.addTo(map);
+                });
+            })
+            .catch(err => {
+                console.error("Error loading COG:", err);
+            });
+
+        // Add layer control
+        L.control.layers(
+            { "OpenStreetMap": osmLayer },
+            { "COG Layer": cogLayer }
+        ).addTo(map);
+    </script>
+</body>
+</html>
