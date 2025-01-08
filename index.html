@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaflet Map with Debugging</title>
+    <title>Leaflet Map with XYZ Tiles</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/geotiff/dist-browser/geotiff.min.js"></script>
-
-    <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
     <style>
         #map {
             height: 100vh;
@@ -19,75 +16,32 @@
 <body>
     <div id="map"></div>
     <script>
-        try {
-            // Initialize the map
-            const map = L.map('map').setView([47.2, 11.3], 8);
+        // Initialize the map
+        const map = L.map('map').setView([47.5, 11.5], 10);
 
-            // Add OpenStreetMap base layer
-            const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
+        // Add OpenStreetMap base layer
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
-            // Add an additional base layer for testing
-            const darkLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-                attribution: '© Stadia Maps contributors'
-            });
+        // Add the XYZ tiles hosted on Nextcloud
+        const nextcloudTiles = L.tileLayer('https://waldtypisierung.ocloud.de/index.php/s/akH4YMPfQ5Wijwc?path=%2Fgeo_c%2F{z}%2F{x}%2F{y}.png', {
+            maxZoom: 13, // Adjust the maxZoom to your tile data's max zoom level
+            tileSize: 256,
+            attribution: '© Your Attribution',
+            noWrap: true,
+        });
 
-            // Add layer control
-            const baseLayers = {
-                "OpenStreetMap": osmLayer,
-                "Dark Mode": darkLayer
-            };
+        // Add Layer Control
+        L.control.layers(
+            { "OpenStreetMap": osmLayer },
+            { "Nextcloud Tiles": nextcloudTiles }
+        ).addTo(map);
 
-            const overlays = {};
-            L.control.layers(baseLayers, overlays).addTo(map);
-
-            console.log("Base layers and layer control loaded successfully.");
-
-            // URL to your COG file
-            const cogUrl = "https://waldtypisierung.ocloud.de/index.php/s/S9N9t8mYTnYtBH3/download/total_precip_cog.tif";
-
-            // Try to load the COG layer
-            console.log("Attempting to fetch the COG file...");
-            fetch(cogUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.arrayBuffer();
-                })
-                .then(buffer => {
-                    console.log("COG file fetched successfully. Parsing GeoTIFF...");
-                    return parseGeoraster(buffer);
-                })
-                .then(georaster => {
-                    console.log("GeoTIFF parsed successfully. Adding GeoRasterLayer to map...");
-                    const cogLayer = new GeoRasterLayer({
-                        georaster: georaster,
-                        opacity: 0.8,
-                        pixelValuesToColorFn: values => {
-                            // Apply a simple color mapping
-                            if (values[0] === 0) return null; // NoData
-                            return `rgba(${values[0]}, ${values[1]}, ${values[2]}, 255)`;
-                        },
-                        resolution: 256 // Adjust for performance
-                    });
-                    cogLayer.addTo(map);
-
-                    // Add COG layer to the layer control
-                    overlays["COG Layer"] = cogLayer;
-                    map.addControl(L.control.layers(baseLayers, overlays));
-
-                    console.log("COG layer added successfully.");
-                })
-                .catch(err => {
-                    console.error("Error loading COG:", err);
-                });
-        } catch (error) {
-            console.error("An error occurred during initialization:", error);
-        }
+        // Add the Nextcloud tiles layer
+        nextcloudTiles.addTo(map);
     </script>
 </body>
 </html>
+
